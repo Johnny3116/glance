@@ -1,0 +1,50 @@
+name: GitHub
+columns:
+  - size: full
+    widgets:
+      - type: releases
+        title: Latest Releases
+        cache: 1h
+        show-source-icon: true
+        # token: ${GITHUB_TOKEN}
+        repositories:
+          - glanceapp/glance
+          - ollama/ollama
+          - rustdesk/rustdesk
+          - portainer/portainer
+
+      - type: rss
+        title: GitHub Blog
+        cache: 12h
+        collapse-after: 5
+        feeds:
+          - url: https://github.blog/feed/
+            title: GitHub Blog
+
+  - size: small
+    widgets:
+      - type: repository
+        title: Glance
+        repository: glanceapp/glance
+        # token: ${GITHUB_TOKEN}
+        pull-requests-limit: 3
+        issues-limit: 3
+        commits-limit: 5
+
+      - type: bookmarks
+        title: GitHub
+        groups:
+          - title: My Work
+            links:
+              - title: Your Profile
+                url: https://github.com
+                icon: si:github
+              - title: Your Repos
+                url: https://github.com?tab=repositories
+                icon: si:github
+              - title: Pull Requests
+                url: https://github.com/pulls
+                icon: mdi:source-pull
+              - title: Issues
+                url: https://github.com/issues
+                icon: mdi:alert-circle-outline

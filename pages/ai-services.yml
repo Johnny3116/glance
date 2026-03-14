@@ -1,0 +1,61 @@
+name: AI Services
+columns:
+  - size: small
+    widgets:
+      - type: monitor
+        title: AI Status
+        cache: 1m
+        sites:
+          - title: Ollama
+            url: http://localhost:11434
+            icon: si:ollama
+          - title: Nexus API
+            url: http://localhost:3000
+            icon: mdi:api
+
+      - type: bookmarks
+        title: AI Tools
+        groups:
+          - title: Services
+            links:
+              - title: Ollama Web UI
+                url: http://localhost:3000
+                icon: si:ollama
+              - title: Nexus API Docs
+                url: http://localhost:3000/docs
+                icon: mdi:file-document-outline
+          - title: Resources
+            links:
+              - title: Ollama Models
+                url: https://ollama.com/library
+                icon: si:ollama
+              - title: HuggingFace
+                url: https://huggingface.co/models
+                icon: si:huggingface
+
+  - size: full
+    widgets:
+      - type: custom-api
+        title: Ollama — Loaded Models
+        cache: 5m
+        url: http://localhost:11434/api/tags
+        template: |
+          <ul class="list list-gap-10">
+          {{ range .JSON.Array "models" }}
+            <li class="flex items-center justify-between">
+              <span class="size-h4 color-highlight">{{ .String "name" }}</span>
+              <ul class="list-horizontal-text">
+                <li>{{ div (.Int "size" | toFloat) 1073741824 | printf "%.1f" }}GB</li>
+                <li class="color-subdue">{{ .String "details.parameter_size" }}</li>
+                <li class="color-subdue">{{ .String "details.family" }}</li>
+              </ul>
+            </li>
+          {{ end }}
+          </ul>
+
+      - type: custom-api
+        title: Nexus API — Health
+        cache: 1m
+        url: http://localhost:3000/health
+        template: |
+          <p class="size-h4 color-paragraph">Status: <span class="color-positive">{{ .JSON.String "status" }}</span></p>

@@ -1,0 +1,50 @@
+name: Home
+columns:
+  - size: small
+    widgets:
+      - type: clock
+        hour-format: 24h
+
+      - type: calendar
+        first-day-of-week: monday
+
+      - type: to-do
+        id: nexus-todo
+
+  - size: full
+    widgets:
+      - type: server-stats
+        title: System Health
+        servers:
+          - type: local
+            name: Nexus
+            hide-mountpoints-by-default: true
+            mountpoints:
+              "/":
+                name: Root
+              "/mnt/data":
+                name: Data
+
+      - type: docker-containers
+        title: Containers
+        hide-by-default: false
+        format-container-names: true
+
+  - size: small
+    widgets:
+      - type: monitor
+        title: Service Health
+        cache: 1m
+        sites:
+          - title: Ollama
+            url: http://localhost:11434
+            icon: si:ollama
+          - title: Nexus API
+            url: http://localhost:3000
+            icon: mdi:api
+          - title: RustDesk
+            url: http://localhost:21114
+            icon: si:rustdesk
+          - title: Portainer
+            url: http://localhost:9000
+            icon: sh:portainer

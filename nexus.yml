@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+branding:
+  logo-text: "N"
+  app-name: "Nexus"
+  custom-footer: |
+    <p>Nexus Homelab Control Center</p>
+
+theme:
+  background-color: 240 10 8
+  primary-color: 210 80 70
+  positive-color: 150 60 50
+  negative-color: 0 70 65
+  contrast-multiplier: 1.1
+
+pages:
+  - $include: pages/home.yml
+  - $include: pages/ai-services.yml
+  - $include: pages/homelab.yml
+  - $include: pages/github.yml
+  - $include: pages/anime.yml
+  - $include: pages/reddit.yml
+  - $include: pages/games.yml

@@ -1,0 +1,44 @@
+name: Homelab
+columns:
+  - size: small
+    widgets:
+      - type: monitor
+        title: Service Health
+        cache: 1m
+        sites:
+          - title: Portainer
+            url: http://localhost:9000
+            icon: sh:portainer
+          - title: RustDesk Server
+            url: http://localhost:21114
+            icon: si:rustdesk
+          - title: RustDesk Relay
+            url: http://localhost:21117
+            icon: si:rustdesk
+
+      - type: bookmarks
+        title: Management
+        groups:
+          - title: Portals
+            links:
+              - title: Portainer
+                url: http://localhost:9000
+                icon: sh:portainer
+              - title: RustDesk Console
+                url: http://localhost:21114
+                icon: si:rustdesk
+          - title: Docs
+            links:
+              - title: RustDesk Self-Host Guide
+                url: https://rustdesk.com/docs/en/self-host/
+                icon: si:rustdesk
+              - title: Docker Docs
+                url: https://docs.docker.com
+                icon: si:docker
+
+  - size: full
+    widgets:
+      - type: docker-containers
+        title: All Containers
+        hide-by-default: false
+        format-container-names: true

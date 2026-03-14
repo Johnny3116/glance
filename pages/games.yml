@@ -1,0 +1,89 @@
+name: Games
+# Required secrets (set as environment variables or Docker secrets):
+#   STEAM_API_KEY  - from https://steamcommunity.com/dev/apikey
+#   STEAM_ID       - your 64-bit Steam ID (find at https://steamid.io)
+columns:
+  - size: small
+    widgets:
+      - type: custom-api
+        title: Steam — Now Playing
+        cache: 5m
+        url: https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/
+        parameters:
+          key: ${STEAM_API_KEY}
+          steamids: ${STEAM_ID}
+        template: |
+          {{ range .JSON.Array "response.players" }}
+          <div class="flex flex-column gap-5">
+            <div class="size-h4 color-highlight">{{ .String "personaname" }}</div>
+            {{ if .String "gameextrainfo" }}
+            <div>Now playing: <span class="color-positive">{{ .String "gameextrainfo" }}</span></div>
+            {{ else }}
+            <div class="color-subdue">Not currently in game</div>
+            {{ end }}
+          </div>
+          {{ end }}
+
+      - type: bookmarks
+        title: Game Stores
+        groups:
+          - title: Stores
+            links:
+              - title: Steam
+                url: https://store.steampowered.com
+                icon: si:steam
+              - title: GOG
+                url: https://www.gog.com
+                icon: si:gog
+              - title: itch.io
+                url: https://itch.io
+                icon: si:itchdotio
+          - title: My Library
+            links:
+              - title: Steam Library
+                url: https://store.steampowered.com/library
+                icon: si:steam
+              - title: Steam Wishlist
+                url: https://store.steampowered.com/wishlist
+                icon: si:steam
+
+  - size: full
+    widgets:
+      - type: custom-api
+        title: Recently Played
+        cache: 30m
+        url: https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/
+        parameters:
+          key: ${STEAM_API_KEY}
+          steamid: ${STEAM_ID}
+          count: 10
+        template: |
+          <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+          {{ range .JSON.Array "response.games" }}
+            <li>
+              <a class="size-h4 color-highlight block text-truncate" href="https://store.steampowered.com/app/{{ .Int "appid" }}/">{{ .String "name" }}</a>
+              <ul class="list-horizontal-text">
+                <li>{{ div (.Int "playtime_2weeks" | toFloat) 60 | printf "%.1f" }}h past 2 weeks</li>
+                <li class="color-subdue">{{ div (.Int "playtime_forever" | toFloat) 60 | printf "%.0f" }}h total</li>
+              </ul>
+            </li>
+          {{ end }}
+          </ul>
+
+      - type: custom-api
+        title: Steam — Current Specials
+        cache: 12h
+        url: https://store.steampowered.com/api/featuredcategories?cc=us
+        template: |
+          <ul class="list list-gap-10 collapsible-container" data-collapse-after="5">
+          {{ range .JSON.Array "specials.items" }}
+            <li>
+              <a class="size-h4 color-highlight block text-truncate" href="https://store.steampowered.com/app/{{ .Int "id" }}/">{{ .String "name" }}</a>
+              <ul class="list-horizontal-text">
+                <li>{{ div (.Int "final_price" | toFloat) 100 | printf "$%.2f" }}</li>
+                {{ $discount := .Int "discount_percent" }}
+                <li{{ if ge $discount 40 }} class="color-positive"{{ end }}>{{ $discount }}% off</li>
+              </ul>
+            </li>
+          {{ end }}
+          </ul>

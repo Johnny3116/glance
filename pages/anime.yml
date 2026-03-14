@@ -1,0 +1,53 @@
+name: Anime
+columns:
+  - size: small
+    widgets:
+      - type: bookmarks
+        title: Watch On
+        groups:
+          - title: Streaming
+            links:
+              - title: Crunchyroll
+                url: https://www.crunchyroll.com
+                icon: si:crunchyroll
+              - title: Funimation
+                url: https://www.funimation.com
+                icon: mdi:play-circle-outline
+              - title: Netflix Anime
+                url: https://www.netflix.com/browse/genre/7424
+                icon: si:netflix
+          - title: Tracking
+            links:
+              - title: AniList
+                url: https://anilist.co
+                icon: si:anilist
+              - title: MyAnimeList
+                url: https://myanimelist.net
+                icon: si:myanimelist
+              - title: LiveChart
+                url: https://www.livechart.me
+                icon: mdi:chart-line
+
+  - size: full
+    widgets:
+      - type: rss
+        title: Currently Airing Episodes
+        cache: 2h
+        collapse-after: 10
+        feeds:
+          - url: https://www.livechart.me/feeds/episodes
+            title: LiveChart
+          - url: https://www.animenewsnetwork.com/all/rss.xml?cat=anime
+            title: Anime News Network
+            limit: 10
+
+      - type: rss
+        title: Anime News
+        cache: 6h
+        collapse-after: 5
+        feeds:
+          - url: https://www.animenewsnetwork.com/all/rss.xml?cat=news
+            title: ANN News
+          - url: https://animecorner.me/feed/
+            title: Anime Corner
+            limit: 5

@@ -1,0 +1,40 @@
+name: Reddit
+# NOTE: Reddit blocks requests from VPS IPs.
+# If hosting on a VPS, add app-auth credentials to each widget:
+#   app-auth:
+#     name: ${REDDIT_APP_NAME}
+#     id: ${REDDIT_APP_CLIENT_ID}
+#     secret: ${REDDIT_APP_SECRET}
+columns:
+  - size: full
+    widgets:
+      - type: split-column
+        max-columns: 3
+        widgets:
+          - type: reddit
+            subreddit: homelab
+            show-thumbnails: true
+            collapse-after: 10
+
+          - type: reddit
+            subreddit: selfhosted
+            show-thumbnails: true
+            collapse-after: 10
+
+          - type: reddit
+            subreddit: LocalLLaMA
+            show-thumbnails: true
+            collapse-after: 10
+
+          - type: reddit
+            subreddit: docker
+            collapse-after: 10
+
+          - type: reddit
+            subreddit: linux
+            collapse-after: 10
+
+          - type: reddit
+            subreddit: anime
+            show-thumbnails: true
+            collapse-after: 10
