@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -21,16 +24,18 @@ var (
 	pageTemplate        = mustParseTemplate("page.html", "document.html", "footer.html")
 	pageContentTemplate = mustParseTemplate("page-content.html")
 	manifestTemplate    = mustParseTemplate("manifest.json")
+	setupTemplate       = mustParseTemplate("setup.html")
 )
 
 const STATIC_ASSETS_CACHE_DURATION = 24 * time.Hour
 
-var reservedPageSlugs = []string{"login", "logout"}
+var reservedPageSlugs = []string{"login", "logout", "setup"}
 
 type application struct {
-	Version   string
-	CreatedAt time.Time
-	Config    config
+	Version    string
+	CreatedAt  time.Time
+	Config     config
+	ConfigPath string
 
 	parsedManifest []byte
 
@@ -424,6 +429,82 @@ func (a *application) handleWidgetRequest(w http.ResponseWriter, r *http.Request
 	// widget.handleRequest(w, r)
 }
 
+type setupTemplateData struct {
+	App           *application
+	Request       templateRequestData
+	ConfigContent string
+}
+
+func (a *application) handleSetupPageRequest(w http.ResponseWriter, r *http.Request) {
+	var configContent string
+	if a.ConfigPath != "" {
+		contents, err := os.ReadFile(a.ConfigPath)
+		if err == nil {
+			configContent = string(contents)
+		}
+	}
+
+	data := setupTemplateData{
+		App:           a,
+		ConfigContent: configContent,
+	}
+	a.populateTemplateRequestData(&data.Request, r)
+
+	var buf bytes.Buffer
+	if err := setupTemplate.Execute(&buf, data); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Write(buf.Bytes())
+}
+
+func (a *application) handleSetupValidate(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, err = newConfigFromYAML(body)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"ok": true})
+}
+
+func (a *application) handleSetupConfigSave(w http.ResponseWriter, r *http.Request) {
+	if a.ConfigPath == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "config path not available"})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if _, err := newConfigFromYAML(body); err != nil {
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+
+	if err := os.WriteFile(a.ConfigPath, body, 0644); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]any{"ok": true})
+}
+
 func (a *application) StaticAssetPath(asset string) string {
 	return a.Config.Server.BaseURL + "/static/" + staticFSHash + "/" + asset
 }
@@ -435,6 +516,10 @@ func (a *application) VersionedAssetPath(asset string) string {
 
 func (a *application) server() (func() error, func() error) {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /setup", a.handleSetupPageRequest)
+	mux.HandleFunc("POST /api/setup/validate", a.handleSetupValidate)
+	mux.HandleFunc("POST /api/setup/config", a.handleSetupConfigSave)
 
 	mux.HandleFunc("GET /{$}", a.handlePageRequest)
 	mux.HandleFunc("GET /{page}", a.handlePageRequest)

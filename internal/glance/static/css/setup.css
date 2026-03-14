@@ -1,0 +1,257 @@
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+.setup-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* ── Header ── */
+
+.setup-header {
+    height: 50px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-widget-content-border);
+    gap: 1.5rem;
+    padding-block: 0;
+}
+
+.setup-header .logo {
+    border-right: 1px solid var(--color-widget-content-border);
+    padding-right: 1.5rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.setup-label {
+    color: var(--color-text-subdue);
+    font-size: var(--font-size-h4);
+    letter-spacing: 0.05em;
+}
+
+.setup-spacer {
+    flex: 1;
+}
+
+/* ── Status indicator ── */
+
+.setup-status {
+    font-size: var(--font-size-h5);
+    color: var(--color-text-subdue);
+    min-width: 12rem;
+    text-align: right;
+    transition: color .2s;
+}
+
+.setup-status-success {
+    color: var(--color-positive);
+}
+
+.setup-status-error {
+    color: var(--color-negative);
+}
+
+.setup-status-busy {
+    color: var(--color-text-base);
+}
+
+/* ── Buttons ── */
+
+.setup-btn {
+    font: inherit;
+    font-size: var(--font-size-h4);
+    padding: 0.4rem 1.4rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-widget-content-border);
+    background: none;
+    color: var(--color-text-base);
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+}
+
+.setup-btn:hover {
+    border-color: var(--color-text-subdue);
+    color: var(--color-text-highlight);
+}
+
+.setup-btn-primary {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.setup-btn-primary:hover {
+    background: hsl(from var(--color-primary) h s l / 0.08);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.setup-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Body: two-pane split ── */
+
+.setup-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Panes ── */
+
+.setup-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+}
+
+.setup-editor-pane {
+    flex: 0 0 50%;
+    max-width: 50%;
+    border-right: 1px solid var(--color-widget-content-border);
+}
+
+.setup-preview-pane {
+    flex: 1;
+    min-width: 0;
+}
+
+.setup-pane-header {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--widget-content-horizontal-padding);
+    border-bottom: 1px solid var(--color-widget-content-border);
+    font-size: var(--font-size-h5);
+    color: var(--color-text-subdue);
+    flex-shrink: 0;
+    background: var(--color-widget-background);
+}
+
+.setup-pane-filename {
+    color: var(--color-text-base);
+}
+
+.setup-pane-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.setup-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-subdue);
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--border-radius);
+    font-size: 1.5rem;
+    line-height: 1;
+    transition: color .2s;
+    font: inherit;
+}
+
+.setup-icon-btn:hover {
+    color: var(--color-text-highlight);
+}
+
+/* ── YAML Editor ── */
+
+.setup-editor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+}
+
+#yaml-editor {
+    flex: 1;
+    width: 100%;
+    padding: 1.4rem var(--widget-content-horizontal-padding);
+    background: var(--color-background);
+    color: var(--color-text-paragraph);
+    border: none;
+    outline: none;
+    resize: none;
+    font: inherit;
+    font-size: var(--font-size-h5);
+    line-height: 1.7;
+    overflow: auto;
+    white-space: pre;
+    word-wrap: normal;
+    tab-size: 2;
+}
+
+#yaml-editor::selection {
+    background: hsl(var(--bghs), calc(var(--scheme) (var(--scheme) var(--bgl) + 20%)));
+}
+
+/* ── Error panel (under editor) ── */
+
+.setup-errors {
+    display: none;
+    flex-shrink: 0;
+    max-height: 18rem;
+    overflow-y: auto;
+    border-top: 1px solid var(--color-negative);
+    background: hsl(0, 30%, 10%);
+    padding: 1rem var(--widget-content-horizontal-padding);
+    font-size: var(--font-size-h5);
+    color: var(--color-negative);
+}
+
+.setup-error-line {
+    padding: 0.2rem 0;
+    line-height: 1.5;
+}
+
+/* ── Preview iframe ── */
+
+#preview-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background: var(--color-background);
+}
+
+.setup-preview-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-subdue);
+    font-size: var(--font-size-h4);
+}
+
+/* ── Saved flash overlay on iframe ── */
+
+.setup-saved-flash {
+    position: absolute;
+    inset: 0;
+    background: hsl(from var(--color-positive) h s l / 0.06);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .4s;
+}
+
+.setup-saved-flash.active {
+    opacity: 1;
+    transition: none;
+}
+
+.setup-preview-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
