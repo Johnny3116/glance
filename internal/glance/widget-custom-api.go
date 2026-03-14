@@ -10,7 +10,9 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -22,6 +24,33 @@ import (
 )
 
 var customAPIWidgetTemplate = mustParseTemplate("custom-api.html", "widget-base.html")
+
+// validateCustomAPIRequestURL blocks requests to private/loopback/link-local addresses
+// to prevent Server-Side Request Forgery (SSRF) attacks.
+func validateCustomAPIRequestURL(rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %v", err)
+	}
+
+	host := parsed.Hostname()
+	if host == "" {
+		return fmt.Errorf("URL has no host")
+	}
+
+	if host == "localhost" {
+		return fmt.Errorf("requests to localhost are not allowed")
+	}
+
+	ip := net.ParseIP(host)
+	if ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return fmt.Errorf("requests to private or reserved IP addresses are not allowed")
+		}
+	}
+
+	return nil
+}
 
 // Needs to be exported for the YAML unmarshaler to work
 type CustomAPIRequest struct {
@@ -168,6 +197,10 @@ func (req *CustomAPIRequest) initialize() error {
 
 	} else if req.Method == "" {
 		req.Method = http.MethodGet
+	}
+
+	if err := validateCustomAPIRequestURL(req.URL); err != nil {
+		return fmt.Errorf("URL validation: %v", err)
 	}
 
 	httpReq, err := http.NewRequest(strings.ToUpper(req.Method), req.URL, req.bodyReader)

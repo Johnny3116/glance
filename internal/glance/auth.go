@@ -14,7 +14,6 @@ import (
 	mathrand "math/rand/v2"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -27,7 +26,7 @@ const AUTH_RATE_LIMIT_MAX_ATTEMPTS = 5
 const AUTH_TOKEN_SECRET_LENGTH = 32
 const AUTH_USERNAME_HASH_LENGTH = 32
 const AUTH_SECRET_KEY_LENGTH = AUTH_TOKEN_SECRET_LENGTH + AUTH_USERNAME_HASH_LENGTH
-const AUTH_TIMESTAMP_LENGTH = 4 // uint32
+const AUTH_TIMESTAMP_LENGTH = 8 // int64
 const AUTH_TOKEN_DATA_LENGTH = AUTH_USERNAME_HASH_LENGTH + AUTH_TIMESTAMP_LENGTH
 
 // How long the token will be valid for
@@ -62,7 +61,7 @@ func generateSessionToken(username string, secret []byte, now time.Time) (string
 	data := make([]byte, AUTH_TOKEN_DATA_LENGTH)
 	copy(data, usernameHash)
 	expires := now.Add(AUTH_TOKEN_VALID_PERIOD).Unix()
-	binary.LittleEndian.PutUint32(data[AUTH_USERNAME_HASH_LENGTH:], uint32(expires))
+	binary.LittleEndian.PutUint64(data[AUTH_USERNAME_HASH_LENGTH:], uint64(expires))
 
 	h := hmac.New(sha256.New, secret[0:AUTH_TOKEN_SECRET_LENGTH])
 	h.Write(data)
@@ -103,7 +102,7 @@ func verifySessionToken(token string, secretBytes []byte, now time.Time) ([]byte
 	timestampBytes := tokenBytes[AUTH_USERNAME_HASH_LENGTH : AUTH_USERNAME_HASH_LENGTH+AUTH_TIMESTAMP_LENGTH]
 	providedSignatureBytes := tokenBytes[AUTH_TOKEN_DATA_LENGTH:]
 
-	h := hmac.New(sha256.New, secretBytes[0:32])
+	h := hmac.New(sha256.New, secretBytes[0:AUTH_TOKEN_SECRET_LENGTH])
 	h.Write(tokenBytes[0:AUTH_TOKEN_DATA_LENGTH])
 	expectedSignatureBytes := h.Sum(nil)
 
@@ -111,7 +110,7 @@ func verifySessionToken(token string, secretBytes []byte, now time.Time) ([]byte
 		return nil, false, fmt.Errorf("signature does not match")
 	}
 
-	expiresTimestamp := int64(binary.LittleEndian.Uint32(timestampBytes))
+	expiresTimestamp := int64(binary.LittleEndian.Uint64(timestampBytes))
 	if now.Unix() > expiresTimestamp {
 		return nil, false, fmt.Errorf("token has expired")
 	}
@@ -120,6 +119,21 @@ func verifySessionToken(token string, secretBytes []byte, now time.Time) ([]byte
 		// True if the token should be regenerated
 		time.Unix(expiresTimestamp, 0).Add(-AUTH_TOKEN_REGEN_BEFORE).Before(now),
 		nil
+}
+
+func (a *application) cleanupExpiredAuthAttempts() {
+	ticker := time.NewTicker(AUTH_RATE_LIMIT_WINDOW)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		a.authAttemptsMu.Lock()
+		for ip, attempt := range a.failedAuthAttempts {
+			if time.Since(attempt.first) > AUTH_RATE_LIMIT_WINDOW {
+				delete(a.failedAuthAttempts, ip)
+			}
+		}
+		a.authAttemptsMu.Unlock()
+	}
 }
 
 func makeAuthSecretKey(length int) (string, error) {
@@ -302,7 +316,6 @@ func (a *application) handleUnauthorizedResponse(w http.ResponseWriter, r *http.
 	return true
 }
 
-// Maybe this should be a POST request instead?
 func (a *application) handleLogoutRequest(w http.ResponseWriter, r *http.Request) {
 	a.setAuthSessionCookie(w, r, "", time.Now().Add(-1*time.Hour))
 	http.Redirect(w, r, a.Config.Server.BaseURL+"/login", http.StatusSeeOther)
@@ -313,7 +326,7 @@ func (a *application) setAuthSessionCookie(w http.ResponseWriter, r *http.Reques
 		Name:     AUTH_SESSION_COOKIE_NAME,
 		Value:    token,
 		Expires:  expires,
-		Secure:   strings.ToLower(r.Header.Get("X-Forwarded-Proto")) == "https",
+		Secure:   a.Config.Server.Proxied,
 		Path:     a.Config.Server.BaseURL + "/",
 		SameSite: http.SameSiteLaxMode,
 		HttpOnly: true,

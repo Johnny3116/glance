@@ -381,47 +381,28 @@ func (a *application) addressOfRequest(r *http.Request) string {
 		return remoteAddrWithoutPort()
 	}
 
-	// This should probably be configurable or look for multiple headers, not just this one
 	forwardedFor := r.Header.Get("X-Forwarded-For")
 	if forwardedFor == "" {
 		return remoteAddrWithoutPort()
 	}
 
+	// Use the rightmost IP in the chain, which is appended by the trusted proxy,
+	// rather than the leftmost which is set by the client and easily spoofed.
 	ips := strings.Split(forwardedFor, ",")
-	if len(ips) == 0 || ips[0] == "" {
-		return remoteAddrWithoutPort()
+	for i := len(ips) - 1; i >= 0; i-- {
+		ip := strings.TrimSpace(ips[i])
+		if ip != "" {
+			return ip
+		}
 	}
 
-	return ips[0]
+	return remoteAddrWithoutPort()
 }
 
 func (a *application) handleNotFound(w http.ResponseWriter, _ *http.Request) {
 	// TODO: add proper not found page
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte("Page not found"))
-}
-
-func (a *application) handleWidgetRequest(w http.ResponseWriter, r *http.Request) {
-	// TODO: this requires a rework of the widget update logic so that rather
-	// than locking the entire page we lock individual widgets
-	w.WriteHeader(http.StatusNotImplemented)
-
-	// widgetValue := r.PathValue("widget")
-
-	// widgetID, err := strconv.ParseUint(widgetValue, 10, 64)
-	// if err != nil {
-	// 	a.handleNotFound(w, r)
-	// 	return
-	// }
-
-	// widget, exists := a.widgetByID[widgetID]
-
-	// if !exists {
-	// 	a.handleNotFound(w, r)
-	// 	return
-	// }
-
-	// widget.handleRequest(w, r)
 }
 
 func (a *application) StaticAssetPath(asset string) string {
@@ -445,14 +426,13 @@ func (a *application) server() (func() error, func() error) {
 		mux.HandleFunc("POST /api/set-theme/{key}", a.handleThemeChangeRequest)
 	}
 
-	mux.HandleFunc("/api/widgets/{widget}/{path...}", a.handleWidgetRequest)
 	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
 	if a.RequiresAuth {
 		mux.HandleFunc("GET /login", a.handleLoginPageRequest)
-		mux.HandleFunc("GET /logout", a.handleLogoutRequest)
+		mux.HandleFunc("POST /logout", a.handleLogoutRequest)
 		mux.HandleFunc("POST /api/authenticate", a.handleAuthenticationAttempt)
 	}
 
@@ -484,16 +464,28 @@ func (a *application) server() (func() error, func() error) {
 	var absAssetsPath string
 	if a.Config.Server.AssetsPath != "" {
 		absAssetsPath, _ = filepath.Abs(a.Config.Server.AssetsPath)
-		assetsFS := fileServerWithCache(http.Dir(a.Config.Server.AssetsPath), 2*time.Hour)
+		assetsFS := fileServerWithCache(http.Dir(absAssetsPath), 2*time.Hour)
 		mux.Handle("/assets/{path...}", http.StripPrefix("/assets/", assetsFS))
+	}
+
+	securityHeaders := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+			next.ServeHTTP(w, r)
+		})
 	}
 
 	server := http.Server{
 		Addr:    fmt.Sprintf("%s:%d", a.Config.Server.Host, a.Config.Server.Port),
-		Handler: mux,
+		Handler: securityHeaders(mux),
 	}
 
 	start := func() error {
+		if a.RequiresAuth {
+			go a.cleanupExpiredAuthAttempts()
+		}
+
 		log.Printf("Starting server on %s:%d (base-url: \"%s\", assets-path: \"%s\")\n",
 			a.Config.Server.Host,
 			a.Config.Server.Port,
